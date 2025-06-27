@@ -1,0 +1,155 @@
+# Spring Boot OAuth2 单点登录应用配置
+# =============================================
+# 此文件为Spring Boot应用的主配置文件，包含了数据源、OAuth2、安全、日志等所有核心配置
+# 配置采用YAML格式，层级结构清晰，便于维护和管理
+
+spring:  # Spring Boot核心配置节点
+  # 应用配置 - 定义应用的基本信息
+  application:
+    name: oauth2-sso  # 应用名称，用于服务发现、监控和日志标识，建议使用小写加连字符格式
+  
+  # 环境配置 - 指定激活的配置文件
+  profiles:
+    active: dev  # 激活的环境配置文件，dev表示开发环境，会加载application-dev.yml
+  
+  # 数据源配置 - MySQL数据库连接配置
+  datasource:
+    url: jdbc:mysql://localhost:3306/OAuth2db?useUnicode=true&characterEncoding=utf8&useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true  # 数据库连接URL，包含字符集、时区、SSL等参数配置
+    username: root  # 数据库用户名，生产环境建议使用专用账户而非root
+    password: ${DB_PASSWORD:your_database_password}  # 数据库密码，使用环境变量DB_PASSWORD，请设置实际密码
+    driver-class-name: com.mysql.cj.jdbc.Driver  # MySQL 8.0 JDBC驱动类名，新版本驱动包名包含.cj
+    hikari:  # HikariCP连接池配置 - 高性能JDBC连接池
+      pool-name: OAuth2-HikariCP  # 连接池名称，便于监控和调试时识别
+      maximum-pool-size: 20  # 连接池最大连接数，根据并发量和数据库性能调整
+      minimum-idle: 5  # 连接池最小空闲连接数，保证基本性能
+      connection-timeout: 30000  # 连接超时时间(毫秒)，30秒后获取连接失败
+      idle-timeout: 600000  # 空闲连接超时时间(毫秒)，10分钟后关闭空闲连接
+      max-lifetime: 1800000  # 连接最大生存时间(毫秒)，30分钟后强制关闭连接，防止长连接问题
+      leak-detection-threshold: 60000  # 连接泄漏检测阈值(毫秒)，60秒未归还连接则报告泄漏
+  
+  # JPA配置 - Java持久化API和Hibernate ORM配置
+  jpa:
+    hibernate:  # Hibernate相关配置
+      ddl-auto: update  # 数据库表结构自动更新策略：update表示根据实体类更新表结构，生产环境建议使用validate
+      naming:  # 命名策略配置
+        physical-strategy: org.hibernate.boot.model.naming.PhysicalNamingStrategyStandardImpl  # 物理命名策略，保持原样不做转换
+    show-sql: false  # 是否在控制台显示SQL语句，开发环境通常设为true，生产环境为false
+    properties:  # Hibernate属性配置
+      hibernate:
+        dialect: org.hibernate.dialect.MySQL8Dialect  # 数据库方言，针对MySQL 8.0优化SQL生成
+        format_sql: true  # 格式化输出的SQL语句，便于阅读和调试
+        use_sql_comments: true  # 在生成的SQL中添加注释，便于理解SQL用途
+        jdbc:  # JDBC相关配置
+          batch_size: 20  # 批处理大小，一次提交20条SQL语句，提高性能
+        cache:  # 缓存配置
+          use_second_level_cache: false  # 禁用二级缓存，简化配置，生产环境可考虑启用
+  
+  # OAuth2客户端配置 - Spring Security OAuth2 Client配置
+  security:
+    oauth2:
+      client:
+        registration:  # OAuth2客户端注册配置
+          github:  # GitHub OAuth2提供商配置
+            client-id: ${GITHUB_CLIENT_ID:your_github_client_id}  # GitHub应用的客户端ID，请在GitHub创建OAuth App获取
+            client-secret: ${GITHUB_CLIENT_SECRET:your_github_client_secret}  # GitHub应用的客户端密钥，请在GitHub创建OAuth App获取
+            scope:  # 请求的权限范围
+              - user:email  # 获取用户邮箱信息的权限
+              - read:user  # 读取用户基本信息的权限
+            redirect-uri: "{baseUrl}/login/oauth2/code/{registrationId}"  # OAuth2回调URI模板，GitHub认证成功后的回调地址
+            client-name: GitHub  # 客户端显示名称，用于UI展示
+        provider:  # OAuth2提供商配置
+          github:  # GitHub提供商的端点配置
+            authorization-uri: https://github.com/login/oauth/authorize  # GitHub授权端点URL
+            token-uri: https://github.com/login/oauth/access_token  # GitHub访问令牌端点URL
+            user-info-uri: https://api.github.com/user  # GitHub用户信息API端点URL
+            user-name-attribute: login  # 用户名属性字段，GitHub API返回的用户名字段名
+  
+  # Thymeleaf模板引擎配置
+  thymeleaf:
+    cache: false  # 是否缓存模板，开发环境设为false便于调试，生产环境建议设为true
+    encoding: UTF-8  # 模板文件编码格式
+    mode: HTML  # 模板模式，HTML模式支持HTML5标准
+    prefix: classpath:/templates/  # 模板文件路径前缀
+    suffix: .html  # 模板文件后缀名
+  
+  # 静态资源配置
+  web:
+    resources:
+      static-locations: classpath:/static/  # 静态资源位置，CSS、JS、图片等文件的存放路径
+      cache:  # 静态资源缓存配置
+        period: 3600  # 缓存时间(秒)，1小时，生产环境可设置更长时间
+  
+  # Jackson JSON处理配置
+  jackson:
+    date-format: yyyy-MM-dd HH:mm:ss  # 日期序列化格式，统一使用ISO格式
+    time-zone: Asia/Shanghai  # 时区设置，使用上海时区(UTC+8)
+    serialization:  # 序列化配置
+      write-dates-as-timestamps: false  # 日期不以时间戳形式序列化，而是使用字符串格式
+    deserialization:  # 反序列化配置
+      fail-on-unknown-properties: false  # 遇到未知属性时不抛出异常，提高容错性
+
+# 服务器配置 - 内嵌Tomcat服务器相关配置
+server:
+  port: 8080  # 服务器监听端口，HTTP服务端口
+  servlet:  # Servlet容器配置
+    context-path: /  # 应用上下文路径，根路径访问应用
+    encoding:  # 字符编码配置
+      charset: UTF-8  # 请求和响应的字符编码
+      force: true  # 强制使用指定编码，覆盖浏览器设置
+  compression:  # HTTP压缩配置
+    enabled: true  # 启用响应压缩，减少网络传输量
+    mime-types: text/html,text/xml,text/plain,text/css,application/javascript,application/json  # 需要压缩的MIME类型
+    min-response-size: 1024  # 最小压缩响应大小(字节)，小于1KB的响应不压缩
+
+# 管理端点配置 - Spring Boot Actuator监控端点
+management:
+  endpoints:  # 端点配置
+    web:
+      exposure:
+        include: health,info,metrics  # 暴露的监控端点：健康检查、应用信息、性能指标
+  endpoint:  # 具体端点配置
+    health:  # 健康检查端点
+      show-details: when-authorized  # 仅在授权时显示详细健康信息，保护敏感信息
+  info:  # 应用信息端点配置
+    env:
+      enabled: true  # 启用环境信息展示
+
+# 日志配置 - 应用日志记录配置
+logging:
+  level:  # 日志级别配置，控制不同包的日志输出详细程度
+    com.example.oauth2sso: INFO  # 应用包日志级别，INFO级别记录重要信息
+    org.springframework.security: INFO  # Spring Security日志级别
+    org.springframework.security.oauth2: DEBUG  # OAuth2相关日志，调试级别便于排查认证问题
+    org.springframework.web: INFO  # Spring Web日志级别
+    org.hibernate.SQL: INFO  # Hibernate SQL日志级别
+    org.hibernate.type.descriptor.sql.BasicBinder: INFO  # Hibernate参数绑定日志级别
+  pattern:  # 日志输出格式配置
+    console: "%d{HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n"  # 控制台日志格式：时间、线程、级别、记录器、消息
+    file: "%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n"  # 文件日志格式：完整日期时间格式
+  file:  # 日志文件配置
+    name: logs/oauth2-sso.log  # 日志文件路径和名称
+    max-size: 10MB  # 单个日志文件最大大小，超过后会轮转
+    max-history: 30  # 保留的历史日志文件数量，30个文件
+
+# 应用自定义配置 - 项目特有的业务配置
+app:
+  name: SpringBoot OAuth2 单点登录示例  # 应用显示名称
+  version: 1.0.0  # 应用版本号
+  description: 基于GitHub OAuth2的单点登录示例应用  # 应用描述
+  author: Luowenqiang  # 应用作者
+  
+  # OAuth2相关自定义配置
+  oauth2:
+    success-redirect-url: /profile  # OAuth2认证成功后的重定向URL
+    failure-redirect-url: /login?error=true  # OAuth2认证失败后的重定向URL
+    logout-success-url: /?logout=true  # 登出成功后的重定向URL
+  
+  # 安全相关配置
+  security:
+    session-timeout: 3600  # 会话超时时间(秒)，1小时后自动过期
+    remember-me-key: oauth2-sso-remember-me  # 记住我功能的密钥，用于加密记住我令牌
+    
+  # 用户相关配置
+  user:
+    default-avatar: /images/default-avatar.png  # 默认用户头像路径
+    avatar-size-limit: 2097152  # 用户头像大小限制(字节)，2MB上限 

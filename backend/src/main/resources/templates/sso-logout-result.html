@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>登出结果</title>
+    <link rel="stylesheet" th:href="@{/css/style.css}">
+    <style>
+        .result-container {
+            max-width: 700px;
+            margin: 50px auto;
+            padding: 30px;
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        
+        .result-header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        
+        .success-icon {
+            color: #4CAF50;
+            font-size: 48px;
+            margin-bottom: 10px;
+        }
+        
+        .error-icon {
+            color: #f44336;
+            font-size: 48px;
+            margin-bottom: 10px;
+        }
+        
+        .result-details {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 8px;
+            margin: 20px 0;
+        }
+        
+        .detail-item {
+            display: flex;
+            justify-content: space-between;
+            margin: 10px 0;
+            padding: 8px 0;
+            border-bottom: 1px solid #e0e0e0;
+        }
+        
+        .detail-item:last-child {
+            border-bottom: none;
+        }
+        
+        .detail-label {
+            font-weight: bold;
+            color: #333;
+        }
+        
+        .detail-value {
+            color: #666;
+        }
+        
+        .status-badge {
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: bold;
+        }
+        
+        .status-success {
+            background-color: #d4edda;
+            color: #155724;
+        }
+        
+        .status-warning {
+            background-color: #fff3cd;
+            color: #856404;
+        }
+        
+        .status-error {
+            background-color: #f8d7da;
+            color: #721c24;
+        }
+        
+        .action-buttons {
+            text-align: center;
+            margin-top: 30px;
+        }
+        
+        .btn {
+            padding: 12px 30px;
+            margin: 0 10px;
+            border: none;
+            border-radius: 6px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+            text-decoration: none;
+            display: inline-block;
+        }
+        
+        .btn-primary {
+            background-color: #4CAF50;
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            background-color: #45a049;
+        }
+        
+        .btn-secondary {
+            background-color: #6c757d;
+            color: white;
+        }
+        
+        .btn-secondary:hover {
+            background-color: #5a6268;
+        }
+        
+        .logout-type-info {
+            background: #e3f2fd;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 20px 0;
+            border-left: 4px solid #2196F3;
+        }
+        
+        .next-steps {
+            background: #fff3e0;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 20px 0;
+            border-left: 4px solid #ff9800;
+        }
+        
+        .next-steps h4 {
+            color: #e65100;
+            margin-top: 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="result-container">
+        <div class="result-header">
+            <div th:if="${logoutResult.success}" class="success-icon">✓</div>
+            <div th:unless="${logoutResult.success}" class="error-icon">✗</div>
+            
+            <h2 th:if="${logoutResult.success}">登出成功</h2>
+            <h2 th:unless="${logoutResult.success}">登出失败</h2>
+        </div>
+        
+        <div class="logout-type-info">
+            <h4>登出类型信息</h4>
+            <p th:switch="${logoutType}">
+                <span th:case="'local'">🔓 仅本地登出 - 只清除了当前浏览器的登录状态</span>
+                <span th:case="'complete'">🔒 完整登出 - 已清除所有设备和会话的登录状态</span>
+                <span th:case="'global'">🔐 全局登出 - 已清除所有会话并撤销OAuth2令牌</span>
+                <span th:case="*">未知登出类型</span>
+            </p>
+        </div>
+        
+        <div class="result-details">
+            <h4>操作详情</h4>
+            
+            <div class="detail-item">
+                <span class="detail-label">用户名：</span>
+                <span class="detail-value" th:text="${logoutResult.username}">用户名</span>
+            </div>
+            
+            <div class="detail-item">
+                <span class="detail-label">操作状态：</span>
+                <span class="status-badge" 
+                      th:classappend="${logoutResult.success} ? 'status-success' : 'status-error'"
+                      th:text="${logoutResult.success} ? '成功' : '失败'">状态</span>
+            </div>
+            
+            <div class="detail-item">
+                <span class="detail-label">清除的会话数：</span>
+                <span class="detail-value" th:text="${#lists.size(logoutResult.expiredSessions)}">0</span>
+            </div>
+            
+            <div class="detail-item" th:if="${#lists.size(logoutResult.failedSessions) > 0}">
+                <span class="detail-label">失败的会话数：</span>
+                <span class="detail-value status-warning" th:text="${#lists.size(logoutResult.failedSessions)}">0</span>
+            </div>
+            
+            <div class="detail-item" th:if="${logoutType == 'global'}">
+                <span class="detail-label">令牌撤销：</span>
+                <span class="status-badge" 
+                      th:classappend="${logoutResult.tokenRevoked} ? 'status-success' : 'status-warning'"
+                      th:text="${logoutResult.tokenRevoked} ? '已撤销' : '未撤销'">令牌状态</span>
+            </div>
+            
+            <div class="detail-item">
+                <span class="detail-label">操作时间：</span>
+                <span class="detail-value" th:text="${#temporals.format(logoutResult.startTime, 'yyyy-MM-dd HH:mm:ss')}">操作时间</span>
+            </div>
+            
+            <div class="detail-item">
+                <span class="detail-label">操作信息：</span>
+                <span class="detail-value" th:text="${logoutResult.message}">操作信息</span>
+            </div>
+        </div>
+        
+        <div class="next-steps">
+            <h4>后续操作建议</h4>
+            <div th:switch="${logoutType}">
+                <div th:case="'local'">
+                    <p>• 您已从当前浏览器登出，其他设备上的会话仍然有效</p>
+                    <p>• 如需完全安全，建议执行"完整登出"或"全局登出"</p>
+                </div>
+                <div th:case="'complete'">
+                    <p>• 您已从所有设备登出，但OAuth2授权仍然有效</p>
+                    <p>• 下次登录时会自动跳转到GitHub进行认证</p>
+                </div>
+                <div th:case="'global'">
+                    <p>• 您已完全登出并撤销了OAuth2令牌</p>
+                    <p>• 下次登录需要重新输入GitHub用户名和密码</p>
+                    <p>• 这是最安全的登出方式</p>
+                </div>
+            </div>
+        </div>
+        
+        <div class="action-buttons">
+            <a th:href="@{/}" class="btn btn-primary">返回首页</a>
+            <a th:href="@{/login}" class="btn btn-secondary">重新登录</a>
+        </div>
+    </div>
+
+    <script>
+        // 页面加载完成后的处理
+        document.addEventListener('DOMContentLoaded', function() {
+            // 如果是全局登出，显示额外的安全提示
+            const logoutType = '[[${logoutType}]]';
+            if (logoutType === 'global') {
+                setTimeout(function() {
+                    const confirmation = confirm('全局登出已完成。为了确保安全，建议您：\n\n1. 清除浏览器缓存和Cookie\n2. 检查其他应用的GitHub授权\n3. 如有必要，更改GitHub密码\n\n是否需要跳转到GitHub安全设置页面？');
+                    if (confirmation) {
+                        window.open('https://github.com/settings/security', '_blank');
+                    }
+                }, 2000);
+            }
+            
+            // 自动跳转计时器（可选）
+            let countdown = 30;
+            const timer = setInterval(function() {
+                countdown--;
+                if (countdown <= 0) {
+                    clearInterval(timer);
+                    window.location.href = '/';
+                }
+            }, 1000);
+            
+            // 点击任何按钮时清除计时器
+            document.querySelectorAll('.btn').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    clearInterval(timer);
+                });
+            });
+        });
+    </script>
+</body>
+</html> 

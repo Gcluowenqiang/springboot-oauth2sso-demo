@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>单点登出确认</title>
+    <link rel="stylesheet" th:href="@{/css/style.css}">
+    <style>
+        .logout-container {
+            max-width: 600px;
+            margin: 50px auto;
+            padding: 30px;
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        
+        .logout-option {
+            margin: 20px 0;
+            padding: 20px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .logout-option:hover {
+            border-color: #4CAF50;
+            background-color: #f8f9fa;
+        }
+        
+        .logout-option.selected {
+            border-color: #4CAF50;
+            background-color: #e8f5e9;
+        }
+        
+        .option-title {
+            font-size: 18px;
+            font-weight: bold;
+            color: #333;
+            margin-bottom: 5px;
+        }
+        
+        .option-description {
+            color: #666;
+            line-height: 1.5;
+        }
+        
+        .session-info {
+            background: #f0f8ff;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 20px 0;
+        }
+        
+        .btn-group {
+            margin-top: 30px;
+            text-align: center;
+        }
+        
+        .btn {
+            padding: 12px 30px;
+            margin: 0 10px;
+            border: none;
+            border-radius: 6px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+        }
+        
+        .btn-primary {
+            background-color: #4CAF50;
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            background-color: #45a049;
+        }
+        
+        .btn-secondary {
+            background-color: #6c757d;
+            color: white;
+        }
+        
+        .btn-secondary:hover {
+            background-color: #5a6268;
+        }
+        
+        .warning-text {
+            color: #ff6b6b;
+            font-size: 14px;
+            margin-top: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="logout-container">
+        <h2>单点登出确认</h2>
+        
+        <div class="session-info">
+            <h4>当前用户信息</h4>
+            <p><strong>用户名：</strong><span th:text="${username}">用户名</span></p>
+            <p><strong>活跃会话数：</strong><span th:text="${activeSessionCount}">0</span> 个</p>
+        </div>
+        
+        <form id="logoutForm" th:action="@{/sso/logout}" method="post">
+            <h4>请选择登出方式：</h4>
+            
+            <div class="logout-option" data-type="local">
+                <input type="radio" name="logoutType" value="local" id="local" style="margin-right: 10px;">
+                <label for="local">
+                    <div class="option-title">仅本地登出</div>
+                    <div class="option-description">
+                        只清除当前浏览器的登录状态，其他设备和会话保持登录。
+                        下次访问时可能自动重新登录。
+                    </div>
+                </label>
+            </div>
+            
+            <div class="logout-option selected" data-type="complete">
+                <input type="radio" name="logoutType" value="complete" id="complete" checked style="margin-right: 10px;">
+                <label for="complete">
+                    <div class="option-title">完整登出（推荐）</div>
+                    <div class="option-description">
+                        清除所有设备和浏览器的登录会话，但保留OAuth2授权。
+                        下次登录时会自动跳转到GitHub进行认证。
+                    </div>
+                </label>
+            </div>
+            
+            <div class="logout-option" data-type="global">
+                <input type="radio" name="logoutType" value="global" id="global" style="margin-right: 10px;">
+                <label for="global">
+                    <div class="option-title">全局登出</div>
+                    <div class="option-description">
+                        清除所有会话并撤销OAuth2令牌，提供最高安全级别。
+                        下次登录需要重新输入GitHub用户名和密码。
+                    </div>
+                    <div class="warning-text">⚠️ 安全级别最高，适用于共享设备或安全敏感环境</div>
+                </label>
+            </div>
+            
+            <div class="btn-group">
+                <button type="submit" class="btn btn-primary">确认登出</button>
+                <button type="button" class="btn btn-secondary" onclick="history.back()">取消</button>
+            </div>
+        </form>
+    </div>
+
+    <script>
+        // 登出选项选择逻辑
+        document.addEventListener('DOMContentLoaded', function() {
+            const options = document.querySelectorAll('.logout-option');
+            const radios = document.querySelectorAll('input[name="logoutType"]');
+            
+            options.forEach(option => {
+                option.addEventListener('click', function() {
+                    // 移除所有选中状态
+                    options.forEach(opt => opt.classList.remove('selected'));
+                    radios.forEach(radio => radio.checked = false);
+                    
+                    // 设置当前选中
+                    this.classList.add('selected');
+                    const radio = this.querySelector('input[type="radio"]');
+                    if (radio) {
+                        radio.checked = true;
+                    }
+                });
+            });
+            
+            // 单选按钮变化监听
+            radios.forEach(radio => {
+                radio.addEventListener('change', function() {
+                    if (this.checked) {
+                        options.forEach(opt => opt.classList.remove('selected'));
+                        const parentOption = this.closest('.logout-option');
+                        if (parentOption) {
+                            parentOption.classList.add('selected');
+                        }
+                    }
+                });
+            });
+        });
+        
+        // 表单提交确认
+        document.getElementById('logoutForm').addEventListener('submit', function(e) {
+            const selectedType = document.querySelector('input[name="logoutType"]:checked').value;
+            let confirmMessage = '';
+            
+            switch(selectedType) {
+                case 'local':
+                    confirmMessage = '确认执行本地登出吗？';
+                    break;
+                case 'complete':
+                    confirmMessage = '确认清除所有会话吗？这将登出所有设备上的会话。';
+                    break;
+                case 'global':
+                    confirmMessage = '确认执行全局登出吗？这将撤销OAuth2令牌，需要重新完整授权。';
+                    break;
+            }
+            
+            if (!confirm(confirmMessage)) {
+                e.preventDefault();
+            }
+        });
+    </script>
+</body>
+</html> 
