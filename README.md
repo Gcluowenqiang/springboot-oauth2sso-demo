@@ -21,9 +21,6 @@
 ```
 springBoot单点登录(OAuth2)/
 ├── README.md                           # 项目说明文档
-├── userinput.py                        # 交互式任务循环脚本
-├── 说明                                # 项目基本信息
-├── rebel.xml                           # JRebel配置文件
 ├── backend/                            # 主项目目录
 │   ├── pom.xml                         # Maven配置文件
 │   ├── src/
